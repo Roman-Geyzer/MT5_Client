@@ -197,6 +197,12 @@ class MT5Server:
         if info is None:
             return None
         return self._convert_numpy_types(info._asdict())
+    
+    def symbol_info_tick(self, symbol):
+        tick = mt5.symbol_info_tick(symbol)
+        if tick is None:
+            return None
+        return self._convert_numpy_types(tick._asdict())
 
     def history_deals_get(self, from_date, to_date):
         deals = mt5.history_deals_get(from_date, to_date)
