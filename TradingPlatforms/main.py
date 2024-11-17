@@ -52,10 +52,90 @@ class MT5Server:
             raise Exception(f"login() failed, error code = {error_code}, description = {description}")
         print(f"Connected to the trade account {account_number} successfully.")
 
+
     def shutdown_mt5(self):
         mt5.shutdown()
         self._initialized = False
         print("MetaTrader 5 shutdown.")
+
+    # Expose methods
+    def account_info(self):
+        info = mt5.account_info()
+        if info is None:
+            return None
+        return self._convert_numpy_types(info._asdict())
+
+    def copy_rates(self, symbol, timeframe, count):
+        data = mt5.copy_rates_from_pos(symbol, timeframe, 0, count)
+        if data is None:
+            return None
+        # Convert structured array to list of dictionaries
+        data_list = [dict(zip(data.dtype.names, row)) for row in data]
+        # Convert NumPy types to native Python types
+        return self._convert_numpy_types(data_list)
+
+    def order_send(self, request):
+        result = mt5.order_send(request)
+        if result is None:
+            return None
+        return self._convert_numpy_types(result._asdict())
+
+    def positions_get(self, ticket=None):
+        positions = mt5.positions_get(ticket=ticket) if ticket else mt5.positions_get()
+        if len(positions) == 0:
+            return None
+        positions_list = [self._convert_numpy_types(pos._asdict()) for pos in positions]
+        return positions_list
+
+    def symbol_info_tick(self, symbol):
+        tick = mt5.symbol_info_tick(symbol)
+        if tick is None:
+            return None
+        return self._convert_numpy_types(tick._asdict())
+
+    def symbol_select(self, symbol, select=True):
+        return mt5.symbol_select(symbol, select)
+
+    def symbol_info(self, symbol):
+        info = mt5.symbol_info(symbol)
+        if info is None:
+            return None
+        return self._convert_numpy_types(info._asdict())
+    
+    def symbol_info_tick(self, symbol):
+        tick = mt5.symbol_info_tick(symbol)
+        if tick is None:
+            return None
+        return self._convert_numpy_types(tick._asdict())
+
+    def history_deals_get(self, from_date, to_date):
+        deals = mt5.history_deals_get(from_date, to_date)
+        if deals is None:
+            return None
+        deals_list = [self._convert_numpy_types(deal._asdict()) for deal in deals]
+        return deals_list
+
+    def copy_rates_from(self, symbol, timeframe, datetime_from, num_bars):
+        data = mt5.copy_rates_from(symbol, timeframe, datetime_from, num_bars)
+        if data is None:
+            return None
+        data_list = [dict(zip(data.dtype.names, row)) for row in data]
+        return self._convert_numpy_types(data_list)
+
+    def copy_rates_from_pos(self, symbol, timeframe, start_pos, count):
+        data = mt5.copy_rates_from_pos(symbol, timeframe, start_pos, count)
+        if data is None:
+            return None
+        data_list = [dict(zip(data.dtype.names, row)) for row in data]
+        return self._convert_numpy_types(data_list)
+
+    def last_error(self):
+        error = mt5.last_error()
+        return self._convert_numpy_types(error)
+    
+
+    def shutdown(self):
+        self.shutdown_mt5()
 
     # Helper function to convert NumPy scalars to native Python types
     def _convert_numpy_types(self, obj):
@@ -153,84 +233,6 @@ class MT5Server:
         }
         # Convert NumPy types to native Python types
         return self._convert_numpy_types(constants)
-
-    # Expose methods
-    def account_info(self):
-        info = mt5.account_info()
-        if info is None:
-            return None
-        return self._convert_numpy_types(info._asdict())
-
-    def copy_rates(self, symbol, timeframe, count):
-        data = mt5.copy_rates_from_pos(symbol, timeframe, 0, count)
-        if data is None:
-            return None
-        # Convert structured array to list of dictionaries
-        data_list = [dict(zip(data.dtype.names, row)) for row in data]
-        # Convert NumPy types to native Python types
-        return self._convert_numpy_types(data_list)
-
-    def order_send(self, request):
-        result = mt5.order_send(request)
-        if result is None:
-            return None
-        return self._convert_numpy_types(result._asdict())
-
-    def positions_get(self, ticket=None):
-        positions = mt5.positions_get(ticket=ticket) if ticket else mt5.positions_get()
-        if len(positions) == 0:
-            return None
-        positions_list = [self._convert_numpy_types(pos._asdict()) for pos in positions]
-        return positions_list
-
-    def symbol_info_tick(self, symbol):
-        tick = mt5.symbol_info_tick(symbol)
-        if tick is None:
-            return None
-        return self._convert_numpy_types(tick._asdict())
-
-    def symbol_select(self, symbol, select=True):
-        return mt5.symbol_select(symbol, select)
-
-    def symbol_info(self, symbol):
-        info = mt5.symbol_info(symbol)
-        if info is None:
-            return None
-        return self._convert_numpy_types(info._asdict())
-    
-    def symbol_info_tick(self, symbol):
-        tick = mt5.symbol_info_tick(symbol)
-        if tick is None:
-            return None
-        return self._convert_numpy_types(tick._asdict())
-
-    def history_deals_get(self, from_date, to_date):
-        deals = mt5.history_deals_get(from_date, to_date)
-        if deals is None:
-            return None
-        deals_list = [self._convert_numpy_types(deal._asdict()) for deal in deals]
-        return deals_list
-
-    def copy_rates_from(self, symbol, timeframe, datetime_from, num_bars):
-        data = mt5.copy_rates_from(symbol, timeframe, datetime_from, num_bars)
-        if data is None:
-            return None
-        data_list = [dict(zip(data.dtype.names, row)) for row in data]
-        return self._convert_numpy_types(data_list)
-
-    def copy_rates_from_pos(self, symbol, timeframe, start_pos, count):
-        data = mt5.copy_rates_from_pos(symbol, timeframe, start_pos, count)
-        if data is None:
-            return None
-        data_list = [dict(zip(data.dtype.names, row)) for row in data]
-        return self._convert_numpy_types(data_list)
-
-    def last_error(self):
-        error = mt5.last_error()
-        return self._convert_numpy_types(error)
-
-    def shutdown(self):
-        self.shutdown_mt5()
 
 def main():
     # Initialize the MT5Server with account details
