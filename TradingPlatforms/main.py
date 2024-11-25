@@ -75,6 +75,7 @@ class MT5Server:
         return self._convert_numpy_types(data_list)
 
     def order_send(self, request):
+        print(f"order send, request is: {request}")
         result = mt5.order_send(request)
         if result is None:
             return None
