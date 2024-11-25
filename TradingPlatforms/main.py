@@ -83,9 +83,10 @@ class MT5Server:
 
     def positions_get(self, ticket=None):
         positions = mt5.positions_get(ticket=ticket) if ticket else mt5.positions_get()
-        if len(positions) == 0:
+        if not positions:
             return None
         positions_list = [self._convert_numpy_types(pos._asdict()) for pos in positions]
+        print(f"positions_get: {positions_list}")
         return positions_list
 
     def symbol_info_tick(self, symbol):
