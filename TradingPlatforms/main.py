@@ -8,11 +8,29 @@ import Pyro5.api
 import Pyro5.server
 import MetaTrader5 as mt5
 import numpy as np
+import datetime
+import inspect
 
 # Account details
 account_number = 10004657677
 server_name = "MetaQuotes-Demo"
 account_password = "*fJrJ0Ma"
+
+
+
+def print_with_time(msg):
+    """
+    Function to print a message with the current timestamp.
+    Function will print the name of the method that called it (using call stack inspection).
+    """
+    frame = inspect.currentframe().f_back  # get the caller's frame
+    module = frame.f_globals.get('__name__', '<unknown module>') # get the module name
+    lineno = frame.f_lineno # get the line number
+    print("-" * 100)
+    print(f"[{datetime.datetime.now()}] - method: {module} prints : *** {msg} ***")
+    print("-" * 100)
+
+
 
 @Pyro5.server.expose
 class MT5Server:
@@ -37,26 +55,26 @@ class MT5Server:
             self._server_name = server_name
             self.initialize_mt5()
             self.login_mt5(self._account_number, self._password, self._server_name)
-            print("MT5Server initialized.")
+            print_with_time("MT5Server initialized.")
 
     def initialize_mt5(self):
-        print("Initializing MetaTrader 5...")
+        print_with_time("Initializing MetaTrader 5...")
         if not mt5.initialize():
             error_code, description = mt5.last_error()
             raise Exception(f"initialize() failed, error code = {error_code}, description = {description}")
-        print("MetaTrader 5 initialized successfully.")
+        print_with_time("MetaTrader 5 initialized successfully.")
 
     def login_mt5(self, account_number, password, server):
         if not mt5.login(account_number, password, server):
             error_code, description = mt5.last_error()
             raise Exception(f"login() failed, error code = {error_code}, description = {description}")
-        print(f"Connected to the trade account {account_number} successfully.")
+        print_with_time(f"Connected to the trade account {account_number} successfully.")
 
 
     def shutdown_mt5(self):
         mt5.shutdown()
         self._initialized = False
-        print("MetaTrader 5 shutdown.")
+        print_with_time("MetaTrader 5 shutdown.")
 
     # Expose methods
     def account_info(self):
@@ -75,10 +93,11 @@ class MT5Server:
         return self._convert_numpy_types(data_list)
 
     def order_send(self, request):
-        print(f"order send, request is: {request}")
+        print_with_time(f"request is: {request}")
         result = mt5.order_send(request)
         if result is None:
             return None
+        print_with_time(f"result retcode : {result.retcode}, deal : {result.deal}, order : {result.order}")
         return self._convert_numpy_types(result._asdict())
 
     def positions_get(self, ticket=None):
@@ -86,7 +105,7 @@ class MT5Server:
         if not positions:
             return None
         positions_list = [self._convert_numpy_types(pos._asdict()) for pos in positions]
-        print(f"positions_get: {positions_list}")
+        print_with_time(f"{len(positions_list)} open trades found.")
         return positions_list
 
     def symbol_info_tick(self, symbol):
@@ -243,13 +262,13 @@ def main():
     # Create a Pyro5 daemon and register the MT5Server object
     daemon = Pyro5.server.Daemon(host="localhost", port=9090)
     uri = daemon.register(mt5_server_instance, objectId="trading.platform.MT5Server")
-    print(f"MT5Server is running. URI: {uri}")
+    print_with_time(f"MT5Server is running. URI: {uri}")
 
     try:
-        print("MT5Server is ready.")
+        print_with_time("MT5Server is ready.")
         daemon.requestLoop()
     except KeyboardInterrupt:
-        print("Shutting down MT5Server...")
+        print_with_time("Shutting down MT5Server...")
     finally:
         mt5_server_instance.shutdown()
         daemon.shutdown()
