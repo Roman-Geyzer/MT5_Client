@@ -130,8 +130,9 @@ class MT5Server:
         return self._convert_numpy_types(tick._asdict())
 
     def history_deals_get(self, from_date, to_date, ticket=None):
-        print_with_time(f"from_date : {from_date}, to_date : {to_date}, ticket : {ticket}")
+        
         if ticket:
+            print_with_time(f"ticket : {ticket}")
             deals = mt5.history_deals_get(ticket=ticket)
         else:
             deals = mt5.history_deals_get(from_date, to_date)
