@@ -129,8 +129,12 @@ class MT5Server:
             return None
         return self._convert_numpy_types(tick._asdict())
 
-    def history_deals_get(self, from_date, to_date):
-        deals = mt5.history_deals_get(from_date, to_date)
+    def history_deals_get(self, from_date, to_date, ticket=None):
+        print_with_time(f"from_date : {from_date}, to_date : {to_date}, ticket : {ticket}")
+        if ticket:
+            deals = mt5.history_deals_get(ticket=ticket)
+        else:
+            deals = mt5.history_deals_get(from_date, to_date)
         if deals is None:
             return None
         deals_list = [self._convert_numpy_types(deal._asdict()) for deal in deals]
