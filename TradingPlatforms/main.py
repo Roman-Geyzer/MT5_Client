@@ -24,11 +24,44 @@ def print_with_time(msg):
     Function will print the name of the method that called it (using call stack inspection).
     """
     frame = inspect.currentframe().f_back  # get the caller's frame
-    module = frame.f_globals.get('__name__', '<unknown module>') # get the module name
-    lineno = frame.f_lineno # get the line number
+    function_name = frame.f_code.co_name  # get the function name
+    #lineno = frame.f_lineno  # get the line number
     print("-" * 100)
-    print(f"[{datetime.datetime.now()}] - method: {module} prints : *** {msg} ***")
+    print(f"[{datetime.datetime.now()}] - function: {function_name}, prints: *** {msg} ***")
     print("-" * 100)
+
+
+def print_with_info(*args, levels_up=2, **kwargs):
+    """
+    Prints information about the call stack up to 'levels_up' levels.
+
+    Parameters:
+        *args: Variable length argument list to be printed after the stack info.
+        levels_up (int): Number of levels up the stack to print info for. Default is 1.
+        **kwargs: Arbitrary keyword arguments to be printed after the stack info.
+    """
+    frame = inspect.currentframe().f_back  # Start with the caller's frame
+    collected_info = []
+    
+    for level in range(1, levels_up + 1):
+        if frame:
+            module = frame.f_globals.get('__name__', '<unknown module>')
+            lineno = frame.f_lineno
+            collected_info.append(f"Level {level}: {module} : Line {lineno}")
+            frame = frame.f_back  # Move up the stack
+        else:
+            collected_info.append(f"Level {level}: <No further stack frames>")
+    
+    border = "*" * 100
+    separator = "-" * 100
+    print(border)
+    print(f"[{datetime.datetime.now()}] - print with info:")
+    for info in collected_info:
+        print(info)
+        print(separator)
+    if args or kwargs:
+        print(*args, **kwargs)
+    print(border)
 
 
 
@@ -97,7 +130,10 @@ class MT5Server:
         result = mt5.order_send(request)
         if result is None:
             return None
-        print_with_time(f"result retcode : {result.retcode}, deal : {result.deal}, order : {result.order}")
+        if result.retcode != mt5.TRADE_RETCODE_DONE:
+            print_with_time(f"order_send failed, retcode={result.retcode}, deal={result.deal}, order={result.order}")
+        else:
+            print_with_time(f"order_send successful (retcode is DONE), deal={result.deal}, order={result.order}")
         return self._convert_numpy_types(result._asdict())
 
     def positions_get(self, ticket=None):
@@ -157,6 +193,7 @@ class MT5Server:
 
     def last_error(self):
         error = mt5.last_error()
+        print_with_info(f"error : {error}")
         return self._convert_numpy_types(error)
     
 
