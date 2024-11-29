@@ -165,17 +165,12 @@ class MT5Server:
             return None
         return self._convert_numpy_types(tick._asdict())
 
-    def history_deals_get(self, from_date, to_date, ticket=None):
+    def history_deals_get(self, ticket):
         
         if ticket:
             print_with_time(f"ticket : {ticket}")
-            deals = mt5.history_deals_get(ticket=ticket)
-        else:
-            deals = mt5.history_deals_get(from_date, to_date)
-        if deals is None:
-            return None
-        deals_list = [self._convert_numpy_types(deal._asdict()) for deal in deals]
-        return deals_list
+            return mt5.history_deals_get(ticket=ticket)
+        return None
 
     def copy_rates_from(self, symbol, timeframe, datetime_from, num_bars):
         data = mt5.copy_rates_from(symbol, timeframe, datetime_from, num_bars)

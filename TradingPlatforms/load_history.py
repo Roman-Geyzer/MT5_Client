@@ -46,7 +46,7 @@ timeframes = {
     'W1': mt5.TIMEFRAME_W1,
 }
 
-def calculate_indicators(df):
+def calculate_indicators(df, pip):
     """
     Calculate technical indicators and add them as new columns to the DataFrame.
 
@@ -128,6 +128,14 @@ def calculate_indicators(df):
             np.where(df['close'] < df[ma_label], 'below', 'equal')
         )
 
+    # 7. Calculate Spread and Practical Spread, populate bid and ask
+
+    # calculate bid and ask ask
+    df['bid'] = df['open'] - df['spread'] * pip / 2
+    df['ask'] = df['open'] + df['spread'] * pip / 2
+
+
+
     return df
 
 def load_history():
@@ -162,6 +170,12 @@ def load_history():
 
         print(f"\nProcessing symbol: {symbol}")
         print(f"Current time is: {datetime.now()}")
+        if 'JPY' in symbol:
+            pip_digits = 2
+        else:
+            pip_digits = 4
+        # Simplified symbol information
+        pip =  10 ** -pip_digits
         for tf_name, tf in timeframes.items():
             print(f"  Timeframe: {tf_name}")
             # Define file path
@@ -234,7 +248,7 @@ def load_history():
 
                 # Calculate technical indicators
                 try:
-                    df_combined = calculate_indicators(df_combined)
+                    df_combined = calculate_indicators(df_combined, pip)
                 except Exception as e:
                     print(f"    Error calculating indicators: {e}")
                     # Optionally, you can choose to skip saving or handle the error differently
