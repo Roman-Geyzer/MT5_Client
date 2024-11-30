@@ -246,14 +246,8 @@ def calculate_sr_levels(df, sr_params):
         # Store SR levels in the DataFrame
         df.at[i, 'upper_sr'] = upper_sr_level
         df.at[i, 'lower_sr'] = lower_sr_level
+        print(f"i is {i}, upper_sr is {upper_sr_level}, lower_sr is {lower_sr_level}")
 
-        # Store previous SR levels
-        if i > 0:
-            df.at[i, 'prev_upper_sr_level'] = df.at[i-1, 'upper_sr']
-            df.at[i, 'prev_lower_sr_level'] = df.at[i-1, 'lower_sr']
-        else:
-            df.at[i, 'prev_upper_sr_level'] = 0.0
-            df.at[i, 'prev_lower_sr_level'] = 0.0
 
     return df
 
@@ -293,6 +287,7 @@ def count_touches(current_hline, recent_rates, uRejectionFromSR, upper=True):
                 ):
                     counter += 1
     return counter
+
 
 def load_history():
     # Initialize MetaTrader 5
@@ -426,7 +421,7 @@ def load_history():
                     continue
 
                 # Handle potential NaN values resulting from SR calculation
-                df_combined[['upper_sr', 'lower_sr', 'prev_upper_sr_level', 'prev_lower_sr_level']] = df_combined[['upper_sr', 'lower_sr', 'prev_upper_sr_level', 'prev_lower_sr_level']].fillna(0)
+                df_combined[['upper_sr', 'lower_sr']] = df_combined[['upper_sr', 'lower_sr']].fillna(0)
 
                 # Save combined data with indicators to Parquet
                 try:
