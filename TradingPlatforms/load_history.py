@@ -51,7 +51,7 @@ def calculate_indicators(df, pip):
     Calculate technical indicators and add them as new columns to the DataFrame.
 
     Parameters:
-    - df: pandas DataFrame with columns ['time', 'open', 'high', 'low', 'close', 'tick_volume', 'spread', 'real_volume']
+    - df: pandas DataFrame with columns ['time', 'open', 'high', 'low', 'close' 'spread']
 
     Returns:
     - df: pandas DataFrame with new indicator columns
@@ -174,12 +174,12 @@ def load_history():
             pip_digits = 2
         else:
             pip_digits = 4
-        # Simplified symbol information
-        pip =  10 ** -pip_digits
+        pip = 10 ** -pip_digits
+
         for tf_name, tf in timeframes.items():
             print(f"  Timeframe: {tf_name}")
-            # Define file path
-            filename = f"{symbol}_{tf_name}.csv"
+            # Define file path with Parquet extension
+            filename = f"{symbol}_{tf_name}.parquet"
             filepath = os.path.join(output_dir, filename)
 
             df_existing = pd.DataFrame()
@@ -188,8 +188,8 @@ def load_history():
 
             if os.path.exists(filepath):
                 try:
-                    # Load existing data
-                    df_existing = pd.read_csv(filepath, parse_dates=['time'])
+                    # Load existing data from Parquet
+                    df_existing = pd.read_parquet(filepath)
                     df_existing['time'] = pd.to_datetime(df_existing['time'])
                     earliest_time = df_existing['time'].min()
                     latest_time = df_existing['time'].max()
@@ -246,6 +246,13 @@ def load_history():
                 # Reset index
                 df_combined.reset_index(drop=True, inplace=True)
 
+                # Set efficient data types
+                df_combined['open'] = df_combined['open'].astype('float32')
+                df_combined['high'] = df_combined['high'].astype('float32')
+                df_combined['low'] = df_combined['low'].astype('float32')
+                df_combined['close'] = df_combined['close'].astype('float32')
+                df_combined['spread'] = df_combined['spread'].astype('int32')
+
                 # Calculate technical indicators
                 try:
                     df_combined = calculate_indicators(df_combined, pip)
@@ -254,12 +261,12 @@ def load_history():
                     # Optionally, you can choose to skip saving or handle the error differently
                     continue
 
-                # Save combined data with indicators
+                # Save combined data with indicators to Parquet
                 try:
-                    df_combined.to_csv(filepath, index=False)
+                    df_combined.to_parquet(filepath, index=False)
                     print(f"    Updated data with indicators saved to {filepath}")
                 except Exception as e:
-                    print(f"    Error saving data to CSV: {e}")
+                    print(f"    Error saving data to Parquet: {e}")
             else:
                 print(f"    No data available for {symbol} on timeframe {tf_name}")
 
