@@ -1,10 +1,9 @@
-# load_history.py
-
 """
 This script loads historical data for 28 major currency pairs from MetaTrader 5.
 The data is saved in CSV files in the 'historical_data' directory.
 The script fetches data before the earliest existing data and after the latest existing data.
-Additionally, it calculates technical indicators and appends them as new columns to the CSV files.
+Additionally, it calculates technical indicators and appends them as new columns to the CSV files,
+including Support and Resistance (SR) indicators: upper_sr, lower_sr, prev_upper_sr_level, prev_lower_sr_level.
 """
 
 import MetaTrader5 as mt5
@@ -46,12 +45,24 @@ timeframes = {
     'W1': mt5.TIMEFRAME_W1,
 }
 
+# SR Parameters
+SR_PARAMS = {
+    'period_for_sr': 100,                # Lookback period for SR levels
+    'touches_for_sr': 3,                 # Number of touches for SR levels
+    'slack_for_sr_atr_div': 10.0,        # Slack for SR levels based on ATR
+    'atr_rejection_multiplier': 1.0,     # ATR rejection multiplier for SR levels
+    'max_distance_from_sr_atr': 2.0,     # Used in trading decisions
+    'min_height_of_sr_distance': 3.0,    # Min height of SR distance - used in calculating SR levels
+    'max_height_of_sr_distance': 200.0,  # Max height of SR distance - used in calculating SR levels
+}
+
 def calculate_indicators(df, pip):
     """
     Calculate technical indicators and add them as new columns to the DataFrame.
 
     Parameters:
-    - df: pandas DataFrame with columns ['time', 'open', 'high', 'low', 'close' 'spread']
+    - df: pandas DataFrame with columns ['time', 'open', 'high', 'low', 'close', 'spread']
+    - pip: float, pip value based on the currency pair
 
     Returns:
     - df: pandas DataFrame with new indicator columns
@@ -130,13 +141,158 @@ def calculate_indicators(df, pip):
 
     # 7. Calculate Spread and Practical Spread, populate bid and ask
 
-    # calculate bid and ask ask
+    # calculate bid and ask
     df['bid'] = df['open'] - df['spread'] * pip / 2
     df['ask'] = df['open'] + df['spread'] * pip / 2
 
+    return df
 
+def calculate_sr_levels(df, sr_params):
+    """
+    Calculate Support and Resistance (SR) levels and add them as new columns to the DataFrame.
+
+    Parameters:
+    - df: pandas DataFrame sorted by 'time' in ascending order with necessary price data and ATR
+    - sr_params: dict containing SR calculation parameters
+
+    Returns:
+    - df: pandas DataFrame with SR indicator columns added
+    """
+
+    # Initialize SR columns with default values
+    df['upper_sr'] = 0.0
+    df['lower_sr'] = 0.0
+    df['prev_upper_sr_level'] = 0.0
+    df['prev_lower_sr_level'] = 0.0
+
+    # Extract SR parameters
+    period_for_sr = sr_params['period_for_sr']
+    touches_for_sr = sr_params['touches_for_sr']
+    slack_for_sr_atr_div = sr_params['slack_for_sr_atr_div']
+    atr_rejection_multiplier = sr_params['atr_rejection_multiplier']
+    min_height_of_sr_distance = sr_params['min_height_of_sr_distance']
+    max_height_of_sr_distance = sr_params['max_height_of_sr_distance']
+
+    # Iterate over the DataFrame to calculate SR levels
+    for i in range(len(df)):
+        if i < period_for_sr:
+            # Not enough data to calculate SR levels
+            continue
+
+        # Define the window for SR calculation
+        window_start = i - period_for_sr
+        window_end = i  # Exclusive
+
+        recent_rates = df.iloc[window_start:window_end]
+
+        atr = df.at[i, 'ATR']
+        if pd.isna(atr) or atr == 0:
+            # Skip if ATR is not available
+            continue
+
+        uSlackForSR = atr / slack_for_sr_atr_div
+        uRejectionFromSR = atr * atr_rejection_multiplier
+
+        current_open = df.at[i, 'open']
+
+        # Initialize HighSR and LowSR
+        HighSR = current_open + min_height_of_sr_distance * uSlackForSR
+        LowSR = current_open - min_height_of_sr_distance * uSlackForSR
+
+        # LocalMax and LocalMin
+        LocalMax = recent_rates['high'].max()
+        LocalMin = recent_rates['low'].min()
+
+        # Initialize LoopCounter
+        LoopCounter = 0
+
+        # Upper SR Level
+        upper_sr_level = 0.0
+        upper_limit = 0.0
+        while LoopCounter < max_height_of_sr_distance:
+            UpperSR = HighSR
+            num_touches = count_touches(UpperSR, recent_rates, uRejectionFromSR, upper=True)
+            if num_touches >= touches_for_sr:
+                upper_sr_level = UpperSR
+                break
+            else:
+                HighSR += uSlackForSR
+                LoopCounter += 1
+                if HighSR > LocalMax:
+                    upper_sr_level = 0
+                    upper_limit = HighSR
+                    break
+
+        # Reset LoopCounter for LowerSR
+        LoopCounter = 0
+
+        # Lower SR Level
+        lower_sr_level = 0.0
+        lower_limit = 0.0
+        while LoopCounter < max_height_of_sr_distance:
+            LowerSR = LowSR
+            num_touches = count_touches(LowerSR, recent_rates, uRejectionFromSR, upper=False)
+            if num_touches >= touches_for_sr:
+                lower_sr_level = LowerSR
+                break
+            else:
+                LowSR -= uSlackForSR
+                LoopCounter += 1
+                if LowSR < LocalMin:
+                    lower_sr_level = 0
+                    lower_limit = LowSR
+                    break
+
+        # Store SR levels in the DataFrame
+        df.at[i, 'upper_sr'] = upper_sr_level
+        df.at[i, 'lower_sr'] = lower_sr_level
+
+        # Store previous SR levels
+        if i > 0:
+            df.at[i, 'prev_upper_sr_level'] = df.at[i-1, 'upper_sr']
+            df.at[i, 'prev_lower_sr_level'] = df.at[i-1, 'lower_sr']
+        else:
+            df.at[i, 'prev_upper_sr_level'] = 0.0
+            df.at[i, 'prev_lower_sr_level'] = 0.0
 
     return df
+
+def count_touches(current_hline, recent_rates, uRejectionFromSR, upper=True):
+    """
+    Count the number of touches to the given SR level.
+
+    Parameters:
+        current_hline (float): The SR level to check.
+        recent_rates (DataFrame): The recent rates to check.
+        uRejectionFromSR (float): The rejection slack based on ATR.
+        upper (bool): True if checking for upper SR, False for lower SR.
+
+    Returns:
+        int: Number of touches.
+    """
+    counter = 0
+    for idx in range(len(recent_rates) - 1):
+        open_price = recent_rates['open'].iloc[idx]
+        close_price = recent_rates['close'].iloc[idx]
+        high_price = recent_rates['high'].iloc[idx]
+        low_price = recent_rates['low'].iloc[idx]
+        candle_size = abs(high_price - low_price)
+
+        if upper:
+            # Upper SR check
+            if open_price < current_hline and close_price < current_hline:
+                if high_price > current_hline or (
+                    candle_size > uRejectionFromSR and (current_hline - high_price) < uRejectionFromSR / 2
+                ):
+                    counter += 1
+        else:
+            # Lower SR check
+            if open_price > current_hline and close_price > current_hline:
+                if low_price < current_hline or (
+                    candle_size > uRejectionFromSR and (low_price - current_hline) < uRejectionFromSR / 2
+                ):
+                    counter += 1
+    return counter
 
 def load_history():
     # Initialize MetaTrader 5
@@ -261,6 +417,17 @@ def load_history():
                     # Optionally, you can choose to skip saving or handle the error differently
                     continue
 
+                # Calculate SR levels
+                try:
+                    df_combined = calculate_sr_levels(df_combined, SR_PARAMS)
+                except Exception as e:
+                    print(f"    Error calculating SR levels: {e}")
+                    # Optionally, handle the error or skip SR calculation
+                    continue
+
+                # Handle potential NaN values resulting from SR calculation
+                df_combined[['upper_sr', 'lower_sr', 'prev_upper_sr_level', 'prev_lower_sr_level']] = df_combined[['upper_sr', 'lower_sr', 'prev_upper_sr_level', 'prev_lower_sr_level']].fillna(0)
+
                 # Save combined data with indicators to Parquet
                 try:
                     df_combined.to_parquet(filepath, index=False)
@@ -277,6 +444,5 @@ def load_history():
     mt5.shutdown()
     print("\nMetaTrader 5 connection closed.")
 
-# Run the function
 if __name__ == "__main__":
     load_history()
