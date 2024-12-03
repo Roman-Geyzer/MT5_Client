@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 import os
 import time
 
-from utlis import load_account_details
+from TradingPlatforms.utils import load_account_details
 
 drive = "x:"
 folder = "historical_data"
