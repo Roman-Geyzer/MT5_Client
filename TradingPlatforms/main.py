@@ -11,10 +11,9 @@ import numpy as np
 import datetime
 import inspect
 
-# Account details
-account_number = 10004657677
-server_name = "MetaQuotes-Demo"
-account_password = "*fJrJ0Ma"
+from utlis import load_account_details
+
+
 
 
 
@@ -293,6 +292,10 @@ class MT5Server:
         return self._convert_numpy_types(constants)
 
 def main():
+    # Load account details
+    print("Loading account details...")
+    account_number, server_name, account_password = load_account_details()
+    print(f"Account details loaded successfully: {account_number}, {server_name}")
     # Initialize the MT5Server with account details
     mt5_server_instance = MT5Server(account_number, account_password, server_name)
 

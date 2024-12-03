@@ -12,10 +12,7 @@ from datetime import datetime, timedelta
 import os
 import time
 
-# Account details
-account_number = 10004657677
-server_name = "MetaQuotes-Demo"
-account_password = "*fJrJ0Ma"
+from utlis import load_account_details
 
 drive = "x:"
 folder = "historical_data"
@@ -31,6 +28,12 @@ currency_pairs = [
     'CHFJPY'
 ]
 
+currency_pairs = [
+'CADCHF',
+    'CHFJPY'
+]
+
+
 # Timeframes
 timeframes = {
     'M1': mt5.TIMEFRAME_M1,
@@ -44,6 +47,11 @@ timeframes = {
 }
 
 def load_history():
+    # Load account details
+    print("Loading account details...")
+    account_number, server_name, account_password = load_account_details()
+    print(f"Account details loaded successfully: {account_number}, {server_name}")
+
     # Initialize MetaTrader 5
     print("Initializing MetaTrader 5...")
     if not mt5.initialize():

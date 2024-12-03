@@ -8,6 +8,11 @@ Functions:
 
 """
 
+
+# Path to account details CSV
+account_details_file = "account_details.csv"
+
+
 import pandas as pd
 import time
 from datetime import datetime
@@ -21,6 +26,24 @@ retry_sets = [
 ]
 
 
+def load_account_details():
+    """
+    Load account details from a CSV file.
+    """
+    try:
+        account_details = pd.read_csv(account_details_file)
+        if len(account_details) == 0:
+            raise ValueError("Account details file is empty.")
+        
+        # Extract the first row
+        account_number = int(account_details.iloc[0]["account_number"])
+        server_name = account_details.iloc[0]["server_name"]
+        account_password = account_details.iloc[0]["account_password"]
+        return account_number, server_name, account_password
+    
+    except Exception as e:
+        print(f"Error reading account details: {e}")
+        quit()
 
 
 def attempt_i_times_with_s_seconds_delay(i, s, loop_error_msg, func_check_func, func, args_tuple):
