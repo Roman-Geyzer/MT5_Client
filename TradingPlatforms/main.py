@@ -11,7 +11,7 @@ import numpy as np
 import datetime
 import inspect
 
-from utlis import load_account_details
+from .utils import load_account_details
 
 
 
