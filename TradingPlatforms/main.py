@@ -141,7 +141,6 @@ class MT5Server:
         if not positions:
             return None
         positions_list = [self._convert_numpy_types(pos._asdict()) for pos in positions]
-        print_with_time(f"{len(positions_list)} open trades found.")
         return positions_list
 
     def symbol_info_tick(self, symbol):
@@ -166,7 +165,6 @@ class MT5Server:
         return self._convert_numpy_types(tick._asdict())
 
     def history_deals_get(self, ticket):
-        
         if ticket:
             print_with_time(f"ticket : {ticket}")
             return mt5.history_deals_get(ticket=ticket)
