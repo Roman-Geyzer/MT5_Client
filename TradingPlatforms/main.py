@@ -79,12 +79,13 @@ class MT5Server:
             cls._instance._initialized = False
         return cls._instance
 
-    def __init__(self, account_number, password, server_name):
+    def __init__(self, account_number, password, server_name, server_delta_time=0):
         if not self._initialized:
             self._initialized = True
             self._account_number = account_number
             self._password = password
             self._server_name = server_name
+            self._server_delta_time = server_delta_time
             self.initialize_mt5()
             self.login_mt5(self._account_number, self._password, self._server_name)
             print_with_time("MT5Server initialized.")
@@ -191,9 +192,13 @@ class MT5Server:
         return self._convert_numpy_types(error)
     
 
+
     def shutdown(self):
         self.shutdown_mt5()
 
+    # Helper function to get the time delta between the server and local machine
+    def get_time_delta(self):
+        return self._server_delta_time
     # Helper function to convert NumPy scalars to native Python types
     def _convert_numpy_types(self, obj):
         if isinstance(obj, dict):
@@ -294,10 +299,10 @@ class MT5Server:
 def main():
     # Load account details
     print("Loading account details...")
-    account_number, server_name, account_password = load_account_details()
+    account_number, server_name, account_password, server_delta_time = load_account_details()
     print(f"Account details loaded successfully: {account_number}, {server_name}")
     # Initialize the MT5Server with account details
-    mt5_server_instance = MT5Server(account_number, account_password, server_name)
+    mt5_server_instance = MT5Server(account_number, account_password, server_name, server_delta_time)
 
     # Create a Pyro5 daemon and register the MT5Server object
     daemon = Pyro5.server.Daemon(host="localhost", port=9090)
