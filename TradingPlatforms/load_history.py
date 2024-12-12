@@ -28,10 +28,7 @@ currency_pairs = [
     'CHFJPY'
 ]
 
-currency_pairs = [
-'CADCHF',
-    'CHFJPY'
-]
+
 
 
 # Timeframes
@@ -115,10 +112,10 @@ def load_history():
             data_frames = []
 
             # Fetch data before earliest_time (if any)
-            if earliest_time is None or earliest_time > datetime(2000, 1, 1):
+            if earliest_time is None or earliest_time > datetime(2010, 1, 1):
                 # Fetch data from desired start date to one second before the earliest existing time
                 fetch_end_date = earliest_time - timedelta(seconds=1) if earliest_time else datetime.now()
-                fetch_start_date = datetime(2000, 1, 1)
+                fetch_start_date = datetime(2010, 1, 1)
                 print(f"    Fetching data from {fetch_start_date} to {fetch_end_date}")
                 rates = mt5.copy_rates_range(symbol, tf, fetch_start_date, fetch_end_date)
                 if rates is not None and len(rates) > 0:
@@ -131,7 +128,7 @@ def load_history():
             # Fetch data after latest_time (if any)
             if latest_time is None or latest_time < datetime.now():
                 # Fetch data from one second after the latest existing time to now
-                fetch_start_date = latest_time + timedelta(seconds=1) if latest_time else datetime(2000, 1, 1)
+                fetch_start_date = latest_time + timedelta(seconds=1) if latest_time else datetime(2010, 1, 1)
                 fetch_end_date = datetime.now()
                 print(f"    Fetching data from {fetch_start_date} to {fetch_end_date}")
                 rates = mt5.copy_rates_range(symbol, tf, fetch_start_date, fetch_end_date)
